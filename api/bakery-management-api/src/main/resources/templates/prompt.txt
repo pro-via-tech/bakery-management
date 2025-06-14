@@ -1,0 +1,60 @@
+Create a complete web application for a bakery management system using Java/Spring Boot for the backend and Angular for the frontend. Choose and implement the most appropriate database solution for this use case. The application should include the following features:
+
+Core Entities and Features:
+
+1. Ingredient Management:
+- Full CRUD operations for ingredients
+- Track costs, inventory levels, and supplier information
+- Support unit conversions (metric/imperial)
+
+2. Recipe Management:
+- Full CRUD operations for recipes
+- Support for nested recipes (sub-recipes like glazes, icings)
+- Include preparation steps, cooking times, and yields
+- Calculate nutritional information based on ingredients
+- Calculate production costs based on ingredient amounts
+
+3. Sales and Pricing System:
+- Two pricing tiers: Retail and Wholesale
+- Wholesale customer management with contact information
+- Bulk discount tiers for wholesale orders
+- Profit margin calculations based on ingredient costs
+
+4. User Management with Role-Based Access:
+- Three user roles with hierarchical permissions:
+  a. Admin: Full system access, including CRUD operations for all users
+  b. Managers: Full CRUD for recipes, ingredients, and staff users
+  c. Staff: View-only access to recipes and ingredients
+
+Technical Requirements:
+
+Backend (Java/Spring Boot):
+- RESTful API design
+- Role-based security implementation
+- Business logic for all calculations (costs, nutrition, pricing)
+- Data validation and error handling
+- Unit tests and integration tests
+
+Frontend (Angular):
+- Responsive design
+- Role-based UI components
+- Forms for all CRUD operations
+- Data tables with sorting and filtering
+- Unit conversion utilities
+- Cost and pricing calculators
+
+Security:
+- Authentication and authorization
+- Password encryption
+- JWT token implementation
+- Role-based access control
+
+Please provide the complete code implementation including:
+1. All necessary entity classes
+2. Controllers, services, repositories, configurations, utilities
+3. Angular components, services, and models
+4. Database schema and migration scripts
+5. Configuration files
+6. README with setup and deployment instructions
+
+The code should follow best practices, include proper error handling, and be well-documented.

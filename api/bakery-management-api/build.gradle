@@ -1,0 +1,137 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version "${springBootVersion}"
+	id 'io.spring.dependency-management' version "${springDependencyManagementVersion}"
+	id 'groovy'
+	id 'jacoco'
+	id 'info.solidsoft.pitest' version "${pitestPluginVersion}"
+}
+
+group = 'com.bakery'
+version = appVersion
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(javaVersion)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+dependencies {
+	// === Spring ===
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+	// === OpenAPI ===
+	implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springDocOpenAi}"
+
+	// === MapStruct ===
+	implementation "org.mapstruct:mapstruct:${mapstructVersion}"
+	annotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
+
+	// === Lombok ===
+	compileOnly "org.projectlombok:lombok:${lombokVersion}"
+	annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+	testCompileOnly "org.projectlombok:lombok:${lombokVersion}"
+	testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+
+	annotationProcessor "org.projectlombok:lombok-mapstruct-binding:0.2.0"
+
+
+	// === Databases ===
+	runtimeOnly 'com.mysql:mysql-connector-j'
+	runtimeOnly 'org.postgresql:postgresql'
+	runtimeOnly 'com.h2database:h2'
+
+	// === Testing ===
+	testImplementation "org.apache.groovy:groovy:${groovyVersion}"
+	testImplementation "org.spockframework:spock-core:${spockVersion}"
+	testImplementation "org.spockframework:spock-spring:${spockVersion}"
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.junit.platform:junit-platform-engine'
+	testImplementation 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(JavaCompile).configureEach {
+	options.annotationProcessorPath = configurations.annotationProcessor
+}
+
+
+tasks.named('test') {
+	useJUnitPlatform()
+	finalizedBy tasks.named('jacocoTestReport')
+}
+
+sourceSets {
+	test {
+		groovy {
+			srcDirs = ['src/test/groovy']
+		}
+		java {
+			srcDirs = []
+		}
+	}
+}
+
+jacoco {
+	toolVersion = jacocoVersion
+}
+
+jacocoTestReport {
+	dependsOn test // ensures tests run before report is generated
+
+	afterEvaluate {
+		classDirectories.setFrom(files(classDirectories.files.collect {
+			fileTree(dir: it, exclude: [
+					'**/dto/**',
+					'**/entity/**',
+					'**/mapper/**',
+					'**/config/**',
+					'**/common/api/**',
+					'**/exception/**',
+					'**/BakeryManagementApplication.java'
+			])
+		}))
+	}
+
+	reports {
+		html.required.set(true)
+		xml.required.set(true)
+		csv.required.set(false)
+	}
+}
+
+
+tasks.named('jacocoTestReport', JacocoReport) {
+	dependsOn test
+	reports {
+		xml.required.set(true)
+		html.required.set(true)
+	}
+	sourceDirectories.setFrom files(sourceSets.main.allSource.srcDirs)
+	classDirectories.setFrom files(sourceSets.main.output)
+	executionData.setFrom fileTree(buildDir).include("/jacoco/test.exec")
+}
+
+pitest {
+	pitestVersion = pitestCoreVersion
+	junit5PluginVersion = pitestJunit5PluginVersion
+
+	targetClasses = ['com.bakery.service.*', 'com.bakery.mapper.*']
+	targetTests = ['com.bakery.*']
+	mutators = ['STRONGER']
+	threads = 4
+	outputFormats = ['HTML', 'XML']
+	timestampedReports = false
+	jvmArgs = ['-Xms512m', '-Xmx1024m']
+}

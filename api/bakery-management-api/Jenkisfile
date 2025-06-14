@@ -1,0 +1,95 @@
+pipeline {
+    agent any
+
+    environment {
+        GRADLE_OPTS = "-Dorg.gradle.daemon=false"
+        DOCKER_IMAGE = "bakery-app:${env.BUILD_NUMBER}"
+    }
+
+    tools {
+        jdk 'jdk17'
+        gradle 'gradle8'
+    }
+
+    options {
+        skipDefaultCheckout()
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                script {
+                    echo "Building branch: ${env.BRANCH_NAME}"
+                    isPR = env.CHANGE_ID != null
+                    isMain = env.BRANCH_NAME == 'main'
+                }
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'gradle clean build -x test'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'gradle test'
+            }
+            post {
+                always {
+                    junit '**/build/test-results/test/*.xml'
+                    archiveArtifacts artifacts: '**/build/reports/tests/test/**', allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('Docker Build') {
+            when {
+                expression { fileExists('Dockerfile') && env.BRANCH_NAME ==~ /(main|release-.*)/ }
+            }
+            steps {
+                sh "docker build -t ${DOCKER_IMAGE} ."
+            }
+        }
+
+        stage('Push Docker Image') {
+            when {
+                allOf {
+                    expression { env.BRANCH_NAME == 'main' }
+                    environment name: 'DOCKER_REGISTRY', value: 'true'
+                }
+            }
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                    sh """
+                        echo "$PASS" | docker login -u "$USER" --password-stdin
+                        docker tag ${DOCKER_IMAGE} your-dockerhub-username/bakery-app:${env.BUILD_NUMBER}
+                        docker push your-dockerhub-username/bakery-app:${env.BUILD_NUMBER}
+                    """
+                }
+            }
+        }
+
+        stage('Deploy') {
+            when {
+                branch 'main'
+            }
+            steps {
+                echo 'Deploying application to production...'
+                // Example:
+                // sh 'kubectl apply -f k8s/deployment.yaml'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Build succeeded on ${env.BRANCH_NAME}"
+        }
+        failure {
+            echo "❌ Build failed on ${env.BRANCH_NAME}"
+        }
+    }
+}
